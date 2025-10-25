@@ -1,34 +1,231 @@
-/* styles.css */
+/* === THEME === */
 :root {
   --bg: #000;
   --fg: #eee;
-  --accent: #eaeaea;
+  --muted: #999;
+  --panel: #101010;
+  --border: #1f1f1f;
+  --accent: #000;        /* all buttons black */
+  --border-light: #888;
+  --text-light: #ddd;
+  --header-height: 56px; /* header height for menu positioning */
 }
 
+/* === BASE === */
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; height: 100%; }
+html, body { height: 100%; }
 body {
+  margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font-family: -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-main {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 24px;
+.hidden { display: none !important; }
+
+/* === HEADER BAR === */
+.appbar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #111;
+  z-index: 100;
+  min-height: var(--header-height);
 }
+.title { font-size: 22px; font-weight: 600; margin: 0; }
+.circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #222;
+  border: 1px solid #333;
+  transition: transform 0.15s ease;
+}
+.circle:active { transform: scale(0.95); }
 
-h1 { margin: 0 0 8px; font-size: 28px; }
-p { margin: 0 0 16px; line-height: 1.5; }
-
-.button {
-  display: inline-block;
-  padding: 10px 16px;
-  border-radius: 12px;
-  background: var(--accent);
-  color: #000;
+/* === SIDE SHEET (menu) === */
+.sheet {
+  position: fixed; /* ensures it floats above everything */
+  left: 12px;
+  top: calc(var(--header-height) + 8px);
+  background: rgba(20,20,20,0.92);
+  border: 1px solid #222;
+  border-radius: 14px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  z-index: 120; /* above header (100) */
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+  animation: sheetIn 0.16s ease;
+}
+@keyframes sheetIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.sheet-header {
+  padding: 8px 10px;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 13px;
+}
+.sheet button {
+  text-align: left;
+  padding: 10px 12px;
+  background: transparent;
   border: none;
-  cursor: pointer;
+  color: var(--fg);
+  border-radius: 8px;
+  transition: background 0.2s ease, color 0.2s ease;
 }
-.button:active { transform: translateY(1px); }
+/* 💙 cool blue hover */
+.sheet button:hover {
+  background: rgba(0,122,255,0.15);
+  color: #cfe2ff;
+}
+
+/* === MAIN === */
+main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+}
+
+/* === CARDS === */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  transition: transform 0.1s ease;
+}
+.card:active { transform: scale(0.995); }
+
+/* === FORM === */
+.form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+.field label {
+  font-size: 13px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 6px;
+}
+.field-label-with-heart {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+input, select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: #0a0a0a;
+  color: #eee;
+  font-size: 15px;
+}
+input::placeholder { color: #666; }
+select { cursor: pointer; }
+select option { background: #111; color: #eee; }
+.actions-row { display: flex; gap: 10px; }
+
+/* === BUTTONS === */
+.btn,
+.btn-ghost,
+.btn-del {
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+/* 🔲 main buttons (dark) */
+.btn {
+  background: var(--accent);
+  border: 1px solid var(--border-light);
+  color: var(--text-light);
+}
+.btn:hover {
+  background: #111;
+  border-color: #aaa;
+  color: #eee;
+  box-shadow: 0 0 6px rgba(255,255,255,0.15);
+}
+
+/* 🔲 ghost buttons (Edit / Cancel) */
+.btn-ghost {
+  background: transparent;
+  border: 1px solid #555;
+  color: var(--text-light);
+}
+.btn-ghost:hover {
+  background: #111;
+  border-color: #777;
+  color: #eee;
+}
+
+/* 🔲 delete buttons (red accent) */
+.btn-del {
+  background: #000;
+  border: 1px solid #d55;
+  color: #d55;
+}
+.btn-del:hover {
+  background: #111;
+  border-color: #f66;
+  color: #f66;
+  box-shadow: 0 0 6px rgba(255,80,80,0.2);
+}
+
+.btn:active,
+.btn-ghost:active,
+.btn-del:active {
+  transform: translateY(1px);
+}
+
+/* === TABLE === */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+.table th,
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.table th {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 13px;
+}
+.table td:last-child { width: 120px; }
+
+/* === HEARTS === */
+.heart {
+  width: 36px;
+  padding: 6px 0;
+  text-align: center;
+  border: none;
+  background: transparent;
+  color: var(--fg);
+}
+
+/* === SMALL === */
+.badge { opacity: 0.7; font-size: 12px; }
+strong { font-weight: 600; }
