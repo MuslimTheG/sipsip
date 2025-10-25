@@ -1,15 +1,14 @@
 // sw.js — SipSip Service Worker
-const CACHE = "sipsip-v4"; // bump when assets change
+const CACHE = "sipsip-v5";
 
 // Core files to cache
 const ASSETS = [
-  ".", // current folder
+  "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./manifest.webmanifest"
 ];
-
 // Install event — cache everything
 self.addEventListener("install", (event) => {
   self.skipWaiting();
