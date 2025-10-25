@@ -1,7 +1,6 @@
-// sw.js — SipSip Service Worker (GitHub Pages friendly)
-const CACHE = "sipsip-v8"; // bump when assets change
 
-// Only files that definitely exist at https://muslimtheg.github.io/sipsip/
+const CACHE = "sipsip-v8"; 
+
 const ASSETS = [
   "./index.html",
   "./styles.css",
