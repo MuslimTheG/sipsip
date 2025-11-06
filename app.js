@@ -1,26 +1,74 @@
-// app.js — Optimized app for tracking café drinks
+// Beer Journal — Offline Beer Tracker 🍺
 
-/* ---------- INITIALIZATION ---------- */
 document.addEventListener("DOMContentLoaded", () => {
-  initSheet();
-  initDrinkSelect();
-  initCafeHeartToggle();
-  initRatingInput();
+  initMenu();
+  initRatingToggle();
+  initFavToggle();
 });
 
-// Menu sheet: toggle on button, close on item selection
-function initSheet() {
+// -------- IndexedDB --------
+let db;
+const DB_NAME = "beer-journal";
+const DB_VERSION = 1;
+
+const dbReq = indexedDB.open(DB_NAME, DB_VERSION);
+dbReq.onupgradeneeded = (e) => {
+  const d = e.target.result;
+  if (!d.objectStoreNames.contains("beers")) {
+    d.createObjectStore("beers", { keyPath: "id", autoIncrement: true });
+  }
+};
+dbReq.onsuccess = async (e) => {
+  db = e.target.result;
+  await Promise.all([renderStats(), renderHistory(), renderFavourites()]);
+};
+dbReq.onerror = (e) => console.error("DB error:", e.target.error);
+
+const dbAll = (store) =>
+  new Promise((res, rej) => {
+    const tx = db.transaction(store);
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => res(req.result || []);
+    req.onerror = () => rej(req.error);
+  });
+
+const dbAdd = (store, data) =>
+  new Promise((res, rej) => {
+    const tx = db.transaction(store, "readwrite");
+    tx.objectStore(store).add(data);
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  });
+
+const dbUpdate = (store, id, patch) =>
+  new Promise(async (res, rej) => {
+    const tx = db.transaction(store, "readwrite");
+    const storeObj = tx.objectStore(store);
+    const getReq = storeObj.get(id);
+    getReq.onsuccess = () => {
+      const existing = getReq.result;
+      storeObj.put({ ...existing, ...patch });
+    };
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  });
+
+const dbDelete = (store, id) =>
+  new Promise((res, rej) => {
+    const tx = db.transaction(store, "readwrite");
+    tx.objectStore(store).delete(id);
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  });
+
+// -------- Menu --------
+function initMenu() {
   const sheet = document.getElementById("sheet");
   const menuBtn = document.getElementById("menuBtn");
-  if (!sheet || !menuBtn) return;
-
-  const toggle = (e) => {
+  menuBtn.addEventListener("click", (e) => {
     e.preventDefault();
-    e.stopPropagation();
     sheet.classList.toggle("hidden");
-  };
-
-  menuBtn.addEventListener("click", toggle);
+  });
   sheet.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-view]");
     if (btn) {
@@ -30,399 +78,183 @@ function initSheet() {
   });
 }
 
-// Café input heart toggle
-function initCafeHeartToggle() {
-  const input = document.getElementById("cafe");
-  const heart = document.getElementById("cafeFavToggle");
-  if (!input || !heart) return;
-
-  const toggle = async (e) => {
-    e.preventDefault();
-    const name = input.value.trim();
-    if (name) {
-      await toggleFav("favCafes", name);
-      await updateHeart("cafe");
-    }
-  };
-
-  heart.addEventListener("mousedown", (e) => e.preventDefault());
-  heart.addEventListener("click", toggle);
-  input.addEventListener("input", () => updateHeart("cafe"));
-}
-
-// Initialize star rating widget
-function initRatingInput() {
-  const container = document.getElementById("rating-input");
-  const input = document.getElementById("rating-value");
-  if (!container || !input) return;
-
-  const stars = container.querySelectorAll(".star");
-  
-  stars.forEach(star => {
-    star.addEventListener("click", (e) => {
-      e.preventDefault();
-      const rating = Number(star.dataset.rating);
-      input.value = rating;
-      updateRatingDisplay(rating);
-    });
-
-    star.addEventListener("mouseenter", () => {
-      const rating = Number(star.dataset.rating);
-      updateRatingDisplay(rating);
-    });
-  });
-
-  container.addEventListener("mouseleave", () => {
-    updateRatingDisplay(Number(input.value));
-  });
-}
-
-function updateRatingDisplay(rating) {
-  const stars = document.querySelectorAll("#rating-input .star");
-  stars.forEach((star, idx) => {
-    star.textContent = (idx + 1) <= rating ? "★" : "☆";
-  });
-  document.getElementById("rating-input").setAttribute("aria-valuenow", rating);
-}
-
-/* ---------- SERVICE WORKER ---------- */
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js", { scope: "./" });
-}
-
-/* ---------- DRINK CATALOG ---------- */
-const DRINKS = [
-  "Espresso", "Cappuccino", "Latte", "Americano", "Macchiato", "Mocha", "Filter Coffee"
-];
-
-/* ---------- INDEXEDDB ---------- */
-let db;
-const DB_NAME = "sipsip-db";
-const DB_VERSION = 8;
-
-const dbInit = indexedDB.open(DB_NAME, DB_VERSION);
-dbInit.onupgradeneeded = (e) => {
-  const d = e.target.result;
-  ["orders", "favs", "favCafes"].forEach(name => {
-    if (!d.objectStoreNames.contains(name)) {
-      d.createObjectStore(name, { keyPath: "id", autoIncrement: name === "orders" });
-    }
-  });
-};
-
-dbInit.onsuccess = async (e) => {
-  db = e.target.result;
-  await Promise.all([
-    updateHeart("drink"),
-    updateHeart("cafe"),
-    renderStats(),
-    renderHistory()
-  ]);
-};
-
-dbInit.onerror = (e) => console.error("DB error:", e.target.error);
-
-// Helper: consistent IndexedDB transaction wrapper
-const dbGet = (store, key, mode = "readonly") =>
-  new Promise((res, rej) => {
-    const req = db.transaction(store, mode).objectStore(store).get(key);
-    req.onsuccess = () => res(req.result);
-    req.onerror = () => rej(req.error);
-  });
-
-const dbGetAll = (store) =>
-  new Promise((res, rej) => {
-    const req = db.transaction(store).objectStore(store).getAll();
-    req.onsuccess = () => res(req.result || []);
-    req.onerror = () => rej(req.error);
-  });
-
-/* ---------- DATA OPERATIONS ---------- */
-const Orders = {
-  add(data) {
-    return new Promise((res, rej) => {
-      const t = db.transaction("orders", "readwrite");
-      t.objectStore("orders").add({ ...data, ts: Date.now() });
-      t.oncomplete = res;
-      t.onerror = () => rej(t.error);
-    });
-  },
-  all() {
-    return dbGetAll("orders");
-  },
-  update(id, patch) {
-    return new Promise((res, rej) => {
-      const t = db.transaction("orders", "readwrite");
-      const s = t.objectStore("orders");
-      const g = s.get(id);
-      g.onsuccess = () => s.put({ ...g.result, ...patch });
-      t.oncomplete = res;
-      t.onerror = () => rej(t.error);
-    });
-  },
-  delete(id) {
-    return new Promise((res, rej) => {
-      const t = db.transaction("orders", "readwrite");
-      t.objectStore("orders").delete(id);
-      t.oncomplete = res;
-      t.onerror = () => rej(t.error);
-    });
-  }
-};
-
-// Unified favorites handler for drinks and cafés
-async function isFav(store, name) {
-  if (!db) return false;
-  return !!(await dbGet(store, name));
-}
-
-async function toggleFav(store, name) {
-  if (!db) return;
-  const exists = await isFav(store, name);
-  const t = db.transaction(store, "readwrite");
-  exists ? t.objectStore(store).delete(name) : t.objectStore(store).put({ id: name });
-  return new Promise((res, rej) => {
-    t.oncomplete = res;
-    t.onerror = () => rej(t.error);
-  });
-}
-
-/* ---------- Views ---------- */
 function switchView(name) {
-  document.querySelectorAll("main > section").forEach(sec => sec.classList.add("hidden"));
+  document.querySelectorAll("main > section").forEach(s => s.classList.add("hidden"));
   document.getElementById(`view-${name}`)?.classList.remove("hidden");
 }
 
-/* ---------- DRINK SELECT + HEART ---------- */
-function initDrinkSelect() {
-  const select = document.getElementById("drink");
-  if (!select) return;
-
-  // Populate options
-  select.innerHTML = DRINKS.map(d => `<option value="${d}">${d}</option>`).join("");
-
-  // Heart toggle
-  const heart = document.getElementById("drinkFavToggle");
-  if (heart) {
-    const toggle = async (e) => {
-      e.preventDefault();
-      await toggleFav("favs", select.value);
-      await updateHeart("drink");
-    };
-    heart.addEventListener("mousedown", (e) => e.preventDefault());
-    heart.addEventListener("click", toggle);
-  }
-
-  // Update on drink change
-  select.addEventListener("change", () => updateHeart("drink"));
+// -------- Rating Toggle --------
+function initRatingToggle() {
+  const buttons = document.querySelectorAll("#rating-toggle button");
+  const input = document.getElementById("rating-value");
+  buttons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      input.value = btn.dataset.value;
+      buttons.forEach(b => b.classList.toggle("active", b === btn));
+    });
+  });
 }
 
-// Unified heart updater for both drink and café
-async function updateHeart(type) {
-  if (!db) return;
-  
-  const config = {
-    drink: { el: "drink", btn: "drinkFavToggle", store: "favs" },
-    cafe: { el: "cafe", btn: "cafeFavToggle", store: "favCafes" }
-  };
-  
-  const { el, btn, store } = config[type];
-  const input = document.getElementById(el);
-  const heart = document.getElementById(btn);
-  
-  if (!input || !heart) return;
-  
-  const name = (el === "cafe" ? input.value.trim() : input.value) || "";
-  const isFavored = name ? await isFav(store, name) : false;
-  
-  heart.textContent = isFavored ? "♥" : "♡";
-  heart.setAttribute("aria-pressed", String(isFavored));
+// -------- Favourite Toggle (in form) --------
+function initFavToggle() {
+  const favBtn = document.getElementById("favToggle");
+  favBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    const pressed = favBtn.getAttribute("aria-pressed") === "true";
+    favBtn.setAttribute("aria-pressed", String(!pressed));
+    favBtn.textContent = pressed ? "♡" : "♥";
+  });
 }
 
-/* ---------- ORDER FORM ---------- */
-document.getElementById("order-form")?.addEventListener("submit", async (e) => {
+// -------- Add Beer --------
+document.getElementById("beer-form")?.addEventListener("submit", async (e) => {
   e.preventDefault();
-  
-  const cafe = document.getElementById("cafe").value.trim();
-  const drink = document.getElementById("drink").value;
-  const price = Number(document.getElementById("price").value);
+  const name = document.getElementById("name").value.trim();
+  const type = document.getElementById("type").value.trim();
+  const price = Number(document.getElementById("price").value) || 0;
   const rating = Number(document.getElementById("rating-value").value) || 0;
   const note = document.getElementById("note").value.trim();
-  
-  if (!cafe || !drink || isNaN(price)) return;
+  const fav = document.getElementById("favToggle").getAttribute("aria-pressed") === "true";
 
-  await Orders.add({ cafe, drink, price, rating, note });
+  if (!name || !type) return;
+
+  await dbAdd("beers", { name, type, price, rating, note, fav, ts: Date.now() });
+
   e.target.reset();
-  updateRatingDisplay(0); // Reset rating display
-  
-  // Refresh UI
-  await Promise.all([
-    updateHeart("cafe"),
-    updateHeart("drink"),
-    renderStats(),
-    renderHistory()
-  ]);
-  
+  document.getElementById("rating-value").value = 0;
+  document.querySelectorAll("#rating-toggle button").forEach(b => b.classList.remove("active"));
+  document.getElementById("favToggle").setAttribute("aria-pressed", "false");
+  document.getElementById("favToggle").textContent = "♡";
+
+  await Promise.all([renderStats(), renderHistory(), renderFavourites()]);
   switchView("stats");
 });
 
-/* ---------- STATS ---------- */
+// -------- Stats --------
 async function renderStats() {
-  const orders = await Orders.all();
-  const total = orders.length;
-  const spent = orders.reduce((s, o) => s + (Number(o.price) || 0), 0);
-  const avgRating = total > 0 
-    ? (orders.reduce((s, o) => s + (Number(o.rating) || 0), 0) / total).toFixed(1)
-    : 0;
+  const beers = await dbAll("beers");
+  const total = beers.length;
+  const spent = beers.reduce((sum, b) => sum + (b.price || 0), 0);
+  const avgRating = total ? (beers.reduce((s, b) => s + (b.rating || 0), 0) / total).toFixed(1) : 0;
 
-  // Find top item by frequency
-  const getTopItem = (key) => {
-    const freq = new Map();
-    for (const o of orders) {
-      const val = o[key]?.trim();
-      if (val) freq.set(val, (freq.get(val) || 0) + 1);
-    }
-    let top = "—", count = 0;
-    for (const [name, ct] of freq) {
-      if (ct > count) { top = name; count = ct; }
-    }
-    return top;
+  const freq = (key) => {
+    const map = new Map();
+    for (const b of beers) map.set(b[key], (map.get(b[key]) || 0) + 1);
+    let max = [null, 0];
+    for (const [k, v] of map) if (v > max[1]) max = [k, v];
+    return max[0] || "—";
   };
 
   document.getElementById("stats").innerHTML = `
-    <div class="card"><strong>Total drinks</strong><div>${total}</div></div>
+    <div class="card"><strong>Total beers</strong><div>${total}</div></div>
     <div class="card"><strong>Total spent</strong><div>€ ${spent.toFixed(2)}</div></div>
-    <div class="card"><strong>Avg. rating</strong><div>${starsDisplay(Math.round(avgRating))}</div></div>
-    <div class="card"><strong>Top café</strong><div>${escapeHtml(getTopItem("cafe"))}</div></div>
-    <div class="card"><strong>Top drink</strong><div>${escapeHtml(getTopItem("drink"))}</div></div>
+    <div class="card"><strong>Average rating</strong><div>${avgRating}</div></div>
+    <div class="card"><strong>Most common type</strong><div>${escapeHtml(freq("type"))}</div></div>
+    <div class="card"><strong>Top beer</strong><div>${escapeHtml(freq("name"))}</div></div>
   `;
 }
 
-/* ---------- HISTORY TABLE ---------- */
+// -------- History --------
 async function renderHistory() {
   const tbody = document.querySelector("#history tbody");
-  if (!tbody) return;
-  
-  const orders = (await Orders.all()).sort((a, b) => b.ts - a.ts);
-  tbody.innerHTML = orders.map(o => 
-    `<tr data-id="${o.id}">${rowHtml(o)}</tr>`
-  ).join("");
+  const beers = (await dbAll("beers")).sort((a, b) => b.ts - a.ts);
+  tbody.innerHTML = beers.map(b => `
+    <tr data-id="${b.id}">
+      <td>${new Date(b.ts).toLocaleString()}</td>
+      <td>${escapeHtml(b.name)}</td>
+      <td>${escapeHtml(b.type)}</td>
+      <td>${b.price.toFixed(2)}</td>
+      <td>${b.rating}</td>
+      <td>${escapeHtml(b.note || "")}</td>
+      <td>${b.fav ? "♥" : "♡"}</td>
+      <td>
+        <button class="btn-ghost edit">Edit</button>
+        <button class="btn-del" data-del>Delete</button>
+      </td>
+    </tr>
+  `).join("");
 }
 
-function starsDisplay(rating) {
-  const r = Number(rating) || 0;
-  return "★".repeat(r) + "☆".repeat(5 - r);
-}
-
-function rowHtml(o) {
-  return `
-    <td>${new Date(o.ts).toLocaleString()}</td>
-    <td>${escapeHtml(o.cafe || "")}</td>
-    <td>${escapeHtml(o.drink || "")}</td>
-    <td>${Number(o.price).toFixed(2)}</td>
-    <td class="rating">${starsDisplay(o.rating || 0)}</td>
-    <td>${escapeHtml(o.note || "")}</td>
-    <td>
-      <button class="btn btn-ghost edit" aria-label="Edit">Edit</button>
-      <button class="btn btn-del" aria-label="Delete" data-del>Delete</button>
-    </td>
-  `;
-}
-
-function editRowHtml(o) {
-  return `
-    <td>${new Date(o.ts).toLocaleString()}</td>
-    <td><input value="${attr(o.cafe)}"></td>
-    <td>
-      <select>
-        ${DRINKS.map(d => `<option ${d === o.drink ? "selected" : ""}>${d}</option>`).join("")}
-      </select>
-    </td>
-    <td><input type="number" step="0.01" min="0" value="${attr(Number(o.price).toFixed(2))}"></td>
-    <td>
-      <div class="rating-edit" data-id="${o.id}">
-        ${[1, 2, 3, 4, 5].map(i => `<button type="button" class="star-edit" data-rating="${i}" title="${i} star${i > 1 ? "s" : ""}">${i <= (o.rating || 0) ? "★" : "☆"}</button>`).join("")}
-      </div>
-    </td>
-    <td><input value="${attr(o.note)}"></td>
-    <td>
-      <button class="btn save" aria-label="Save">Save</button>
-      <button class="btn btn-ghost cancel" aria-label="Cancel">Cancel</button>
-    </td>
-  `;
-}
-
+// Edit/Delete handlers
 document.querySelector("#history tbody")?.addEventListener("click", async (e) => {
   const tr = e.target.closest("tr");
   if (!tr) return;
-  
   const id = Number(tr.dataset.id);
-  const all = await Orders.all();
-  const order = all.find(x => x.id === id);
-  if (!order) return;
 
-  // Delete
-  if (e.target.closest("[data-del]")) {
-    await Orders.delete(id);
-    await Promise.all([renderStats(), renderHistory()]);
+  if (e.target.dataset.del !== undefined) {
+    await dbDelete("beers", id);
+    await Promise.all([renderStats(), renderHistory(), renderFavourites()]);
     return;
   }
 
-  // Edit mode
   if (e.target.classList.contains("edit")) {
-    tr.classList.add("editing");
-    tr.innerHTML = editRowHtml(order);
-    
-    // Add rating star click handlers
-    const stars = tr.querySelectorAll(".star-edit");
-    stars.forEach(star => {
-      star.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        const rating = Number(star.dataset.rating);
-        stars.forEach((s, idx) => {
-          s.textContent = (idx + 1) <= rating ? "★" : "☆";
-        });
-      });
-    });
-    return;
+    const beers = await dbAll("beers");
+    const beer = beers.find(b => b.id === id);
+    if (!beer) return;
+    tr.innerHTML = editRowHtml(beer);
   }
 
-  // Cancel edit
-  if (e.target.classList.contains("cancel")) {
-    tr.classList.remove("editing");
-    tr.innerHTML = rowHtml(order);
-    return;
-  }
-
-  // Save edit
   if (e.target.classList.contains("save")) {
-    const inputs = tr.querySelectorAll("input, select");
-    const stars = tr.querySelectorAll(".star-edit");
-    const rating = Math.max(
-      0,
-      Array.from(stars).filter(s => s.textContent === "★").length
-    );
-    const [cafe, drink, priceStr, note] = [
-      inputs[0].value,
-      inputs[1].value,
-      inputs[2].value,
-      inputs[3].value
-    ];
-    const price = Number(priceStr);
+    const inputs = tr.querySelectorAll("input");
+    const [name, type, priceStr, ratingStr, note] = Array.from(inputs).map(i => i.value);
+    const fav = tr.querySelector(".fav-check").checked;
+    const patch = {
+      name: name.trim(),
+      type: type.trim(),
+      price: Number(priceStr),
+      rating: Number(ratingStr),
+      note: note.trim(),
+      fav
+    };
+    await dbUpdate("beers", id, patch);
+    await Promise.all([renderStats(), renderHistory(), renderFavourites()]);
+  }
 
-    await Orders.update(id, { cafe, drink, price, rating, note });
-    tr.classList.remove("editing");
-    await Promise.all([renderStats(), renderHistory()]);
+  if (e.target.classList.contains("cancel")) {
+    await renderHistory();
   }
 });
 
-/* ---------- UTILITIES ---------- */
-const HTML_ESCAPE = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
-
-function escapeHtml(s) {
-  return String(s ?? "").replace(/[&<>"']/g, (c) => HTML_ESCAPE[c]);
+function editRowHtml(b) {
+  return `
+    <td>${new Date(b.ts).toLocaleString()}</td>
+    <td><input value="${attr(b.name)}"></td>
+    <td><input value="${attr(b.type)}"></td>
+    <td><input type="number" step="0.01" min="0" value="${b.price.toFixed(2)}"></td>
+    <td><input type="number" step="1" min="1" max="5" value="${b.rating}"></td>
+    <td><input value="${attr(b.note || "")}"></td>
+    <td><input type="checkbox" class="fav-check" ${b.fav ? "checked" : ""}></td>
+    <td>
+      <button class="btn save">Save</button>
+      <button class="btn-ghost cancel">Cancel</button>
+    </td>
+  `;
 }
 
-function attr(s) {
-  return escapeHtml(s);
+// -------- Favourites --------
+async function renderFavourites() {
+  const list = document.getElementById("fav-list");
+  const beers = (await dbAll("beers")).filter(b => b.fav);
+  if (beers.length === 0) {
+    list.innerHTML = "<p>No favourites yet 🍺</p>";
+    return;
+  }
+  list.innerHTML = beers.map(b => `
+    <div class="card">
+      <strong>${escapeHtml(b.name)}</strong><br>
+      <span class="badge">${escapeHtml(b.type)}</span><br>
+      Rating: ${b.rating}/5<br>
+      ${b.price ? `€${b.price.toFixed(2)}` : ""}
+    </div>
+  `).join("");
+}
+
+// -------- Utilities --------
+const HTML_ESCAPE = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, c => HTML_ESCAPE[c]); }
+function attr(s) { return escapeHtml(s); }
+
+// -------- Service Worker --------
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js", { scope: "./" });
 }

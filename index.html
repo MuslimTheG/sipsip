@@ -13,85 +13,92 @@
 <body>
   <!-- Header -->
   <header class="appbar">
-    <button id="menuBtn" aria-label="Open menu" class="circle"></button>
+    <button id="menuBtn" aria-label="Open menu" class="circle">
+      <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+        <path d="M320-200h280v-400h-80q-28 0-46 14t-43 41q-20 22-46.5 45.5T320-465v265Zm-80 80v-346q-52-14-86-56t-34-98q0-53 30.5-94t78.5-57q23-48 68.5-78T400-879q35 0 65.5 12t55.5 32q10-2 19-3.5t20-1.5q66 0 113 47t47 113q0 22-5.5 42T698-600h62q33 0 56.5 23.5T840-520v240q0 33-23.5 56.5T760-200h-80v80H240Zm-40-500q0 33 23.5 56.5T280-540q32 0 54.5-21t46.5-47q25-27 56.5-49.5T520-680h120q0-33-23.5-56.5T560-760q-25 0-42 6.5l-17 6.5-31-26q-11-9-28.5-17.5T400-799q-32 0-58.5 17T301-736l-14 30-32 11q-25 8-40 28.5T200-620Zm480 340h80v-240h-80v240Zm-360 80h280-280Z"/>
+      </svg>
+    </button>
     <h1 class="title">SipSip</h1>
   </header>
 
-  <!-- Side Sheet (toggle only by the button) -->
+  <!-- Side Sheet -->
   <nav id="sheet" class="sheet hidden" aria-label="Menu">
     <div class="sheet-header">Menu</div>
-    <button data-view="menu">Add drink</button>
+    <button data-view="add">Add a Drink</button>
     <button data-view="stats">Stats</button>
+    <button data-view="favs">Favourites</button>
   </nav>
 
   <main>
-    <!-- Add Order -->
-    <section id="view-menu">
-      <form id="order-form" class="card form" autocomplete="off">
-        <!-- Café (heart favourite) -->
+    <!-- Add Beer -->
+    <section id="view-add">
+      <form id="beer-form" class="card form" autocomplete="off">
+        <!-- Beer Name -->
         <div class="field">
           <label class="field-label-with-heart">
-            Café
-            <button id="cafeFavToggle" class="btn-ghost heart" type="button"
+            Name
+            <button id="favToggle" class="btn-ghost heart" type="button"
                     title="Toggle favourite" aria-pressed="false">♡</button>
           </label>
-          <input id="cafe" required />
+          <input id="name" placeholder="e.g., Augustiner Helles" required />
         </div>
 
-        <!-- Drink (heart favourite) -->
+        <!-- Beer Type -->
         <div class="field">
-          <label class="field-label-with-heart">
-            Drink
-            <button id="drinkFavToggle" class="btn-ghost heart" type="button"
-                    title="Toggle favourite" aria-pressed="false">♡</button>
-          </label>
-          <select id="drink" required></select>
+          <label>Type</label>
+          <input id="type" placeholder="e.g., Lager, IPA..." required />
         </div>
 
         <!-- Price -->
         <div class="field">
           <label>Price (€)</label>
-          <input id="price" type="number" step="0.01" min="0" placeholder="e.g., 3.7" required />
+          <input id="price" type="number" step="0.01" min="0" placeholder="e.g., 3.5" />
         </div>
 
         <!-- Rating -->
         <div class="field">
-          <label>Rating</label>
-          <div id="rating-input" class="rating-input" role="slider" aria-label="Rate the drink (1-5 stars)" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0">
-            <button type="button" class="star" data-rating="1" title="1 star">☆</button>
-            <button type="button" class="star" data-rating="2" title="2 stars">☆</button>
-            <button type="button" class="star" data-rating="3" title="3 stars">☆</button>
-            <button type="button" class="star" data-rating="4" title="4 stars">☆</button>
-            <button type="button" class="star" data-rating="5" title="5 stars">☆</button>
+          <label>Rating (1–5)</label>
+          <div id="rating-toggle" class="rating-toggle">
+            <button type="button" data-value="1">1</button>
+            <button type="button" data-value="2">2</button>
+            <button type="button" data-value="3">3</button>
+            <button type="button" data-value="4">4</button>
+            <button type="button" data-value="5">5</button>
           </div>
           <input id="rating-value" type="hidden" value="0" />
         </div>
 
-        <!-- Note -->
+        <!-- Notes -->
         <div class="field">
-          <label>Note (optional)</label>
-          <input id="note" placeholder="e.g., oat milk" />
+          <label>Notes (optional)</label>
+          <input id="note" placeholder="e.g., smooth finish, malty aroma..." />
         </div>
 
         <div class="actions-row">
-          <button class="btn" id="saveOrder" type="submit">Add</button>
+          <button class="btn" type="submit">Add</button>
         </div>
       </form>
     </section>
 
-    <!-- Stats / History (editable) -->
+    <!-- Stats -->
     <section id="view-stats" class="hidden">
       <div id="stats"></div>
       <div class="card" style="overflow:auto">
         <table id="history" class="table">
           <thead>
             <tr>
-              <th>Date</th><th>Café</th><th>Drink</th><th>Price (€)</th><th>Rating</th><th>Note</th><th></th>
+              <th>Date</th><th>Name</th><th>Type</th><th>Price (€)</th><th>Rating</th><th>Note</th><th>Fav</th><th></th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
+    </section>
+
+    <!-- Favourites -->
+    <section id="view-favs" class="hidden">
+      <h2>Favourites</h2>
+      <div id="fav-list" class="card-list"></div>
     </section>
   </main>
 
