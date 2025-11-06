@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5" />
   <title>SipSip</title>
 
   <link rel="manifest" href="./manifest.webmanifest" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="apple-touch-icon" href="./icons/192.png" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
@@ -57,13 +58,13 @@
 
         <!-- Rating -->
         <div class="field">
-          <label>Rating (1–5)</label>
+          <label>Rating</label>
           <div id="rating-toggle" class="rating-toggle">
-            <button type="button" data-value="1">1</button>
-            <button type="button" data-value="2">2</button>
-            <button type="button" data-value="3">3</button>
-            <button type="button" data-value="4">4</button>
-            <button type="button" data-value="5">5</button>
+            <button type="button" class="star-btn" data-value="1" title="1 star">☆</button>
+            <button type="button" class="star-btn" data-value="2" title="2 stars">☆</button>
+            <button type="button" class="star-btn" data-value="3" title="3 stars">☆</button>
+            <button type="button" class="star-btn" data-value="4" title="4 stars">☆</button>
+            <button type="button" class="star-btn" data-value="5" title="5 stars">☆</button>
           </div>
           <input id="rating-value" type="hidden" value="0" />
         </div>

@@ -88,9 +88,17 @@ function initRatingToggle() {
   const buttons = document.querySelectorAll("#rating-toggle button");
   const input = document.getElementById("rating-value");
   buttons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      input.value = btn.dataset.value;
-      buttons.forEach(b => b.classList.toggle("active", b === btn));
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const rating = Number(btn.dataset.value);
+      input.value = rating;
+      
+      // Update all stars: fill up to selected, empty the rest
+      buttons.forEach((b, idx) => {
+        const starValue = Number(b.dataset.value);
+        b.textContent = starValue <= rating ? "★" : "☆";
+        b.classList.toggle("active", starValue === rating);
+      });
     });
   });
 }
@@ -122,7 +130,10 @@ document.getElementById("beer-form")?.addEventListener("submit", async (e) => {
 
   e.target.reset();
   document.getElementById("rating-value").value = 0;
-  document.querySelectorAll("#rating-toggle button").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll("#rating-toggle button").forEach(b => {
+    b.textContent = "☆";
+    b.classList.remove("active");
+  });
   document.getElementById("favToggle").setAttribute("aria-pressed", "false");
   document.getElementById("favToggle").textContent = "♡";
 
