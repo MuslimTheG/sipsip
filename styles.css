@@ -88,7 +88,7 @@ body {
 }
 /* 💙 blue hover for sidebar */
 .sheet button:hover {
-  background: rgba(0,122,255,0.15);
+  background: rgba(0, 122, 255, 0.15);
   color: #cfe2ff;
 }
 
@@ -163,7 +163,7 @@ select {
 select:focus {
   outline: 0;
   border-color: #555;
-  box-shadow: 0 0 0 2px rgba(0,122,255,0.25);
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.25);
 }
 select option {
   background: #111;
@@ -182,25 +182,32 @@ select::-ms-expand { display: none; }
   cursor: pointer;
   font-weight: 500;
   transition: all 0.15s ease;
+  border: 1px solid;
 }
 
-/* 🔲 main buttons (dark) */
+.btn:active,
+.btn-ghost:active,
+.btn-del:active {
+  transform: translateY(1px);
+}
+
+/* Main buttons (dark) */
 .btn {
   background: var(--accent);
-  border: 1px solid var(--border-light);
+  border-color: var(--border-light);
   color: var(--text-light);
 }
 .btn:hover {
   background: #111;
   border-color: #aaa;
   color: #eee;
-  box-shadow: 0 0 6px rgba(255,255,255,0.15);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.15);
 }
 
-/* 🔲 ghost buttons (Edit / Cancel) */
+/* Ghost buttons (Edit / Cancel) */
 .btn-ghost {
   background: transparent;
-  border: 1px solid #555;
+  border-color: #555;
   color: var(--text-light);
 }
 .btn-ghost:hover {
@@ -209,23 +216,17 @@ select::-ms-expand { display: none; }
   color: #eee;
 }
 
-/* 🔲 delete buttons (red accent) */
+/* Delete buttons (red accent) */
 .btn-del {
   background: #000;
-  border: 1px solid #d55;
+  border-color: #d55;
   color: #d55;
 }
 .btn-del:hover {
   background: #111;
   border-color: #f66;
   color: #f66;
-  box-shadow: 0 0 6px rgba(255,80,80,0.2);
-}
-
-.btn:active,
-.btn-ghost:active,
-.btn-del:active {
-  transform: translateY(1px);
+  box-shadow: 0 0 6px rgba(255, 80, 80, 0.2);
 }
 
 /* === TABLE === */
@@ -255,6 +256,50 @@ select::-ms-expand { display: none; }
   border: none;
   background: transparent;
   color: var(--fg);
+}
+
+/* === RATING === */
+.rating-input {
+  display: flex;
+  gap: 4px;
+  user-select: none;
+}
+
+.rating-input .star,
+.rating-edit .star-edit {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #ffc107;
+  font-size: 20px;
+  cursor: pointer;
+  transition: transform 0.1s ease, color 0.1s ease;
+}
+
+.rating-input .star:hover,
+.rating-edit .star-edit:hover {
+  transform: scale(1.2);
+  color: #ffb300;
+}
+
+.rating-input .star:active,
+.rating-edit .star-edit:active {
+  transform: scale(0.95);
+}
+
+.rating {
+  color: #ffc107;
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.rating-edit {
+  display: flex;
+  gap: 2px;
+  justify-content: center;
 }
 
 /* === SMALL === */
